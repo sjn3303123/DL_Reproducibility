@@ -10,6 +10,7 @@ import torch.utils.data.sampler as sampler
 from torch.utils.data import DataLoader
 from torchvision.datasets import SVHN
 
+#---------------------------------------------------------This part was written by Jinna Shi---------------------------------------------#
 def ClassGenerator(label):
     class_3 = {0: 0, 1: 1, 2: 2, 3: 0, 4: 2, 5: 2, 6: 0, 7: 1, 8: 0, 9: 0}
     label_c3 = np.vectorize(class_3.get)(label)
@@ -219,13 +220,15 @@ trainloader = DataLoader(trainset, batch_size=batch_size, shuffle=True)
 testloader = DataLoader(testset, batch_size=batch_size, shuffle=True)
 valloader = DataLoader(valset, batch_size=batch_size, shuffle=True)
 
+#-----------------------------This part was borrowed by the author https://github.com/lorenmt/maxl---------------------------------------#
+#
 # define label-generation model,
 # and optimiser with learning rate 1e-3, drop half for every 50 epochs, weight_decay=5e-4,
 psi = [3]*10  # for each primary class split into 5 auxiliary classes, with total 100 auxiliary classes
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 LabelGenerator = LabelGenerator(psi=psi).to(device)
 gen_optimizer = optim.Adam(LabelGenerator.parameters(), weight_decay=5e-4)
-# gen_scheduler = optim.lr_scheduler.StepLR(gen_optimizer, step_size=10, gamma=0.5)
+gen_scheduler = optim.lr_scheduler.StepLR(gen_optimizer, step_size=10, gamma=0.5)
 
 # define parameters
 total_epoch = 30
@@ -236,7 +239,7 @@ val_batch = len(valloader)
 # define multi-task network, and optimiser with learning rate 0.01, drop half for every 50 epochs
 model = SimpleCNN(psi=psi).to(device)
 optimizer = optim.Adam(model.parameters())
-# scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.5)
+scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.5)
 avg_cost = np.zeros([total_epoch, 9], dtype=np.float32)
 lr = 0.001  # define learning rate for second-derivative step (theta_1^+)
 k = 0
@@ -345,8 +348,8 @@ for index in range(total_epoch):
         cost[3] = train_acc1
         avg_cost[index][3:7] += cost[0:4] / train_batch
 
-    # scheduler.step()
-    # gen_scheduler.step()
+    scheduler.step()
+    gen_scheduler.step()
 
     # evaluate on test data
     model.eval()
